@@ -1,0 +1,116 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('untitled5:server');
+var http = require('http');
+var crypto = require('crypto');
+var rsa = require('node-rsa');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+var key = new rsa();
+key.setOptions('browser', 'pckcs1', 'pkcs1-256');
+key.generateKeyPair();
+var testPhrase = new Buffer("Ceci est un buffer");
+var server = http.createServer(app);
+var socketserv = require('socket.io').listen(server);
+console.log("der public: "+key.exportKey("pkcs1-public-der", "utf-8"));
+socketserv.sockets.on('connection', function (socket) {
+    console.log('Un client est connecté ! '+ socketserv.engine.clientsCount);
+    socketserv.emit("key_p", key.exportKey("pkcs1-public-der", "utf-8"));
+    socket.on("status", function (contenu) {
+        console.log(contenu);
+    });
+    socket.on("key_p", function (contenu) {
+        console.log(contenu);
+        //var jsonKey = JSON.parse(contenu);
+        // var clientKey = "-----BEGIN RSA PUBLIC KEY-----\n"+jsonKey.key+"\n-----END RSA PUBLIC KEY-----";
+        // socketserv.emit("notif", crypto.publicEncrypt(clientKey, testPhrase))
+    });
+
+});
+
+
+socketserv.sockets.on('disconnecting', function (socket) {
+    console.log('Un client c\'est déconnecté');
+});
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
