@@ -8,7 +8,7 @@ var app = require('../app');
 var debug = require('debug')('untitled5:server');
 var http = require('http');
 var crypto = require('crypto');
-var rsa = require('node-rsa');
+var nodeRsa = require('node-rsa');
 
 /**
  * Get port from environment and store in Express.
@@ -20,38 +20,30 @@ app.set('port', port);
 /**
  * Create HTTP server.
  */
-var key = new rsa();
-key.setOptions('browser', 'pckcs1', 'pkcs1-256');
-key.generateKeyPair();
-var testPhrase = new Buffer("Ceci est un buffer");
 var server = http.createServer(app);
-var socketserv = require('socket.io').listen(server);
-console.log("der public: "+key.exportKey("pkcs1-public-der", "utf-8"));
-socketserv.sockets.on('connection', function (socket) {
-    console.log('Un client est connecté ! '+ socketserv.engine.clientsCount);
-    socketserv.emit("key_p", key.exportKey("pkcs1-public-der", "utf-8"));
-    socket.on("status", function (contenu) {
-        console.log(contenu);
+
+var rsa = new nodeRsa();
+rsa.generateKeyPair(2048, 77777);
+var keyP = {
+  key : rsa.exportKey("pkcs8-public-pem")
+}
+console.log(keyP);
+var socket = require('socket.io')(server);
+socket.on("connection", function (socket) {
+  console.log("Connected")
+    socket.emit("key",JSON.stringify(keyP));
+    socket.on("message", function (data) {
+      console.log(rsa.decrypt(data));
     });
-    socket.on("key_p", function (contenu) {
-        console.log(contenu);
-        //var jsonKey = JSON.parse(contenu);
-        // var clientKey = "-----BEGIN RSA PUBLIC KEY-----\n"+jsonKey.key+"\n-----END RSA PUBLIC KEY-----";
-        // socketserv.emit("notif", crypto.publicEncrypt(clientKey, testPhrase))
-    });
-
 });
+socket.listen(8081);
 
-
-socketserv.sockets.on('disconnecting', function (socket) {
-    console.log('Un client c\'est déconnecté');
-});
 
 /**
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
+server.listen(3000);
 server.on('error', onError);
 server.on('listening', onListening);
 
@@ -113,4 +105,12 @@ function onListening() {
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
+}
+
+function removeArray(objet, array){
+    for (var i = 0; i < array.length; i++){
+        if (array[i] == objet){
+            array.splice(i, 1);
+        }
+    }
 }
