@@ -26,7 +26,7 @@ app.use('/users', users);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
-  var err = new Error('Vous vous êtes perdu dans la fôret de l\'internet\nallez à la page 57');
+  var err = new Error('LALALA Vous êtes perdu LALALA');
   err.status = 404;
   next(err);
 });
